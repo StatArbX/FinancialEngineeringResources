@@ -1,0 +1,12 @@
+[package]
+name = "write_csv_to_db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+csv = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+chrono = "0.4"
+bson = "2.0"
+mongodb = { version = "2.8.2", default-features = false, features = ["tokio-runtime"] }
+tokio = { version = "1", features = ["full"] }
