@@ -7,11 +7,10 @@ import aiofiles
 class LoggerBase:
     def __init__(self, 
                  logger=None, 
-                 log_file = None):
+                 log_file=None):
         
         self.log_file = log_file
         self.logger = logger
-
 
         if logger is None:
             self.logger = logging.getLogger(self.__class__.__name__)
@@ -30,26 +29,37 @@ class LoggerBase:
         
         self.logger.info(f"{self.__class__.__name__} logger initialized")
     
-    async def async_log(self, level, message):
+    def log(self, level, message):
         log_method = getattr(self.logger, level.lower(), self.logger.info)
         log_method(message)
 
         if self.log_file:
             log_message = f"{datetime.now()} - {self.__class__.__name__} - {level.upper()} - {message}\n"
-            async with aiofiles.open(self.log_file, mode='a') as f:
-                await f.write(log_message)
+            with open(self.log_file, mode='a') as f:
+                f.write(log_message)
 
-    async def info(self, message,*args,**kwargs):
-        await self.async_log('info', message)
+    def info(self, message, *args, **kwargs):
+        self.log('info', message)
 
-    async def warning(self, message,*args,**kwargs):
-        await self.async_log('warning', message)
+    def warning(self, message, *args, **kwargs):
+        self.log('warning', message)
 
-    async def error(self, message,*args,**kwargs):
-        await self.async_log('error', message)
+    def error(self, message, *args, **kwargs):
+        self.log('error', message)
 
-    async def debug(self, message,*args,**kwargs):
-        await self.async_log('debug', message)
+    def debug(self, message, *args, **kwargs):
+        self.log('debug', message)
 
-    async def critical(self, message,*args,**kwargs):
-        await self.async_log('critical', message)
+    def critical(self, message, *args, **kwargs):
+        self.log('critical', message)
+    
+    def FileError(self, message, *args, **kwargs):
+        self.log('FileError', message)
+
+    def IndexKeyError(self, message, *args, **kwargs):
+        self.log('IndexKeyError', message)
+
+    def ioError(self, message, *args, **kwargs):
+        self.log('I/O Error', message)
+        
+    

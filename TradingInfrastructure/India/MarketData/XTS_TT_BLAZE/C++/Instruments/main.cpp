@@ -147,6 +147,7 @@ std::tuple<std::vector<Bid>,std::vector<Ask>> MarketDataAPIFunctions::Quotes(con
 
 
         std::cout<<"Peforming A Curl Request To Quotes()"<<std::endl;
+        std::string start_curl_event = "Peforming A Curl Request To Quotes()";
 
         res = curl_easy_perform(curl);
         curl_slist_free_all(headers);
@@ -351,6 +352,7 @@ void MarketDataAPIFunctions::Subscribe(const int& exchangeSegment,
 
     // This Initialisaiton of variables is when to send the payload
     Json::Value result;
+    Json::Value response_data;
     Json::CharReaderBuilder response_reader;
     std::string errors;
     
@@ -386,12 +388,25 @@ void MarketDataAPIFunctions::Subscribe(const int& exchangeSegment,
 
         std::istringstream res_stream(response_buffer);
 
-        if(!Json::parseFromStream(response_reader,res_stream,&result,&errors)){
+        if(!Json::parseFromStream(response_reader,res_stream,&response_data,&errors)){
             std::cerr<<"Error In Storing Data From Response Stream In A JSON Object In Subscribe"<<std::endl;
         }
+
+        const Json::Value& result = response_data[0]["result"];
+        std::string list_quotes_string = result["listQuotes"];
+
+        // This part involves conversion of the listQuotes string to a JSON object
+        std::istringstream list_quotes_stream(list_quotes_string);
+        std::string list_quotes_errors;
+        Json::CharReaderBuilder list_quotes_reader_builder;
+        Json::Value list_quotes_json_obj;
+
+        if(!Json::parseFromStream(list_quotes_reader_builder,list_quotes_stream,&list_quotes_json_obj,&errors)){
+            std::cerr<<"Error in parsing the listQuotes string from the Subscribe function"<<std::endl;
+        }
+
         
-           
-        
+
     }
 
 

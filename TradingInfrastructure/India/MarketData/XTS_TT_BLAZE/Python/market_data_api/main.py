@@ -318,7 +318,7 @@ class MarketDataAPIFunctions:
         
         self.config.read(str(self.config_file_path))
 
-        self.token =self.config[section_header][section_item_name]
+        self.token = self.config[section_header][section_item_name]
         
         assert self.token, "token should not be None but is None"
         

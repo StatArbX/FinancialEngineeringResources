@@ -3,6 +3,7 @@ import configparser
 import os
 import sys
 import json
+
 '''
 These are some parameters to pass to use market_data_api class: 
 url: The base URL for the API. 
@@ -13,12 +14,10 @@ apiKey: API key for market API authentication.
 '''
 
 
-import logging
+from logger.main import LoggerBase
 
 
-
-
-class MarketDataApiCredentials:
+class MarketDataApiCredentials(LoggerBase):
     def __init__(self, 
                  url = "https://ttblaze.iifl.com", 
                  access_password = "2021HostLookUpAccess",
@@ -26,7 +25,9 @@ class MarketDataApiCredentials:
                  secretKey = None,
                  apiKey = None
                  ):
+
         super().__init__()
+
         self.url = url
         self.access_password = access_password
         self.version = version
@@ -40,23 +41,30 @@ class MarketDataApiCredentials:
 
           
     async def save_to_config(self):
-        await self.info("Attempting to save credentials to config file: %s", self.config_file_path)
+        self.info("Attempting to save credentials to config file: %s", self.config_file_path)
 
         try:
             with open(self.config_file_path, 'w') as configfile:
                 self.config.write(configfile)
-            await self.info("Credentials successfully saved to config file: %s", self.config_file_path)
+            self.info("Credentials successfully saved to config file: %s", self.config_file_path)
         except IOError as io_err:
-            await self.error("Error writing to config file: %s", io_err)
-            raise IOError(f"Error writing to config file: {io_err}")
+            self.ioError("Error writing to config file: %s", io_err)
+            raise 
+
 
     async def HostLookUp(self):
+        
+        if not self.config_file_path:
+            self.FileError("Cannot Have `config_file_path` empty")
+            raise 
+        
         self.config.read(str(self.config_file_path))
         self.secretKey = self.config['AUTH']['secret_key'] or None
         self.apiKey = self.config['AUTH']['api_key'] or None
 
-        if self.auth_token:
-            await self.info("Using existing auth token from config.")
+        if not self.auth_token:
+            self.error(fr"`auth_token` is empty inside {self.__class__.__name__}.HostLookUp")
+            raise ValueError(fr"`auth_token` is empty inside {self.__class__.__name__}.HostLookUp")
     
         HOST_LOOKUP_URL = fr"{self.url}:4000/HostLookUp"
         self.config.read(self.config_file_path)
@@ -67,30 +75,29 @@ class MarketDataApiCredentials:
 
         if self.auth_token is None:
             self.config.read(self.config_file_path)
-            # if self.config.get("AUTH", {}).get("uniqueKey"):
             self.auth_token = self.config['AUTH'].get('unique_key') or None
         
         if self.auth_token is None:
             try:
                 response = rqs.post(url = HOST_LOOKUP_URL, json = payload_host_lookup)
             except rqs.exceptions.HTTPError as http_err:
-                await self.error(f"HTTP error occurred during host lookup: {http_err}")
+                self.error(f"HTTP error occurred during host lookup: {http_err}")
                 return None
             except rqs.exceptions.ConnectionError as conn_err:
-                await self.error(f"Connection error occurred during host lookup: {conn_err}")
+                self.error(f"Connection error occurred during host lookup: {conn_err}")
                 return None
             except rqs.exceptions.Timeout as timeout_err:
-                await self.error(f"Timeout error occurred during host lookup: {timeout_err}")
+                self.error(f"Timeout error occurred during host lookup: {timeout_err}")
                 return None
             except rqs.exceptions.RequestException as req_err:
-                await self.error(f"An error occurred during host lookup: {req_err}")
+                self.error(f"An error occurred during host lookup: {req_err}")
                 return None
 
             try:
-                await self.info(fr"Reponse From HostLookUp | {response} : {response.json()}")
+                self.info(fr"Reponse From HostLookUp | {response} : {response.json()}")
                 response_data = response.json()
             except ValueError as json_err:
-                await self.error(f"JSON decode error: {json_err}")
+                self.error(f"JSON decode error: {json_err}")
                 return None
 
             unique_key = response_data["result"]["uniqueKey"]
@@ -144,17 +151,18 @@ class MarketDataApiCredentials:
         
         if response_market_data_login.status_code == 200:
             login_response = response_market_data_login.json()
+            self.info(fr"Login Response: {login_response}")
             self.token = login_response.get('result').get('token')
             self.config['AUTH']['token'] = self.token
             with open(str(self.config_file_path),'w') as configfile:
                 self.config.write(configfile)
             print(fr"Login Was Successful | {self.token}")
-            await self.info(fr"Login Was Successful | {self.token}")
+            self.info(fr"Login Was Successful | {self.token}")
             return self.token 
         else:
-            print(fr"LOGIN INTO MARKET DATA API FAILED {response_market_data_login.json()}")
+            self.error(fr"Login Failed: {login_response}")
+        
 
-    
     async def logout(self):
         self.config.read(str(self.config_file_path))
         self.token = self.config["AUTH"]["token"]
@@ -168,14 +176,14 @@ class MarketDataApiCredentials:
             "authorization": self.token
         }
 
-        response = rqs.delete(LOGOUT_URL, headers = headers)
-
+        response = rqs.delete(LOGOUT_URL, 
+                              headers = headers)
         if response.status_code == 200:
             print("Successfully Logged Out")
-            await self.info("Successfully Logged Out")
+            self.info(fr"Successfully Logged Out | Logout Response: {response}")
         else:
-            print("Unsuccessfully Logged Out")
-            await self.info("Unsuccessfully Logged Out")
+            print(fr"Unsuccessfully Logged Out | Logout Response: {response}")
+            self.info(fr"Unsuccessfully Logged Out | Logout Response: {response}")
         
     
     

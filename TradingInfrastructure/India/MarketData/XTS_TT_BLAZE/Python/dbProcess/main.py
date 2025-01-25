@@ -76,6 +76,7 @@ class LowLatencyDataBase:
                 '1510-json-full': self.mongo_db["1510-json-full"],
                 '1105-json-full': self.mongo_db["1105-json-full"],
             }
+            self.info("Collections for the Database for Channels Initialised")
             self.data_deques = {
                 '1501-json-full': deque(),
                 '1502-json-full': deque(),
@@ -84,6 +85,7 @@ class LowLatencyDataBase:
                 '1510-json-full': deque(),
                 '1105-json-full': deque(),
             }
+            self.info("Deque for Channels Initialised")
             self.event_handles = [
                 '1501-json-full',
                 '1502-json-full',
@@ -92,6 +94,7 @@ class LowLatencyDataBase:
                 '1512-json-full',
                 '1105-json-full',
             ]
+            self.info("Event handlers for Channels Initialised")
         except Exception as e:
             print(fr"Initiating Deque and Handles error: {e}")
 
@@ -102,29 +105,29 @@ class LowLatencyDataBase:
                                         args =(key,))
                 self.threads_deques[key] = thread
                 thread.start()
+                self.info(fr"Starting thread the Deque for {key}")
                 # thread.join()
             except Exception as e:
                 print(fr"threaded processes for deques went wrong | error: {e}")
 
 
         self.threads_redis_channels = {}
-
         for channel, db in self.mongo_coll.items():
             try:
                 thread = threading.Thread(target = self.listen_to_channel, args = (channel,db))
                 self.threads_redis_channels[channel] = thread
                 thread.start()
+                self.info(fr"Starting thread the Channel: {channel} | Database: {db}")
                 # thread.join()
             except Exception as e:
                 print(fr"threaded processes for event handles went wrong | error: {e}")
 
-
-
     def process_data(self, key):
-        redis_client = redis.Redis(host=self.redis_host, 
-                                        port=self.redis_port, 
-                                        db=self.redis_db, 
-                                        connection_pool = self.pool)
+        redis_client = redis.Redis(host = self.redis_host, 
+                                    port = self.redis_port, 
+                                    db = self.redis_db, 
+                                    connection_pool = self.pool)
+        
         while True:            
             if self.data_deques[key]:
                 data = self.data_deques[key].popleft()
@@ -138,7 +141,11 @@ class LowLatencyDataBase:
                     print(f"Failed to publish to Redis: {e}")
                     time.sleep(0.1)
 
-    def listen_to_channel(self, channel, db):
+
+    def listen_to_channel(self, 
+                        channel,
+                        db):
+        
         redis_client = redis.Redis(host=self.redis_host, 
                                         port=self.redis_port, 
                                         db=self.redis_db, 
